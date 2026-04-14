@@ -229,14 +229,20 @@ $( document ).ready(function() {
 	url = new URL((window.location.href));
 	query_string = url.searchParams.get("q");
 	if (query_string != null) {
-		decoded_str = decodeURIComponent(window.atob(query_string));
-		data = JSON.parse(decoded_str);
+		try {
+			decoded_str = decodeURIComponent(window.atob(query_string));
+			data = JSON.parse(decoded_str);
+			console.log('Loaded shared data from URL');
 
-		// save data to local storage
-		// refresh without data in the url
-		if (local_storage_available) {
-			localStorage.setItem('leaderboard_data', JSON.stringify(data));
-			window.location.href = [location.protocol, '//', location.host, location.pathname].join('');
+			// save data to local storage
+			// refresh without data in the url
+			if (local_storage_available) {
+				save_data_to_storage();
+				window.location.href = [location.protocol, '//', location.host, location.pathname].join('');
+			}
+		} catch(e) {
+			console.error('Error parsing shared data from URL:', e);
+			data = [];
 		}
 		return;
 	}
@@ -244,14 +250,25 @@ $( document ).ready(function() {
 	// 2nd step:
 	// check for data in the local storage
 	if (local_storage_available) {
-		data = JSON.parse(localStorage.getItem('leaderboard_data'));
-		
-		// add data to the UI
-		if (data != null) {
-			build_leaderboard();
-		} else {
+		try {
+			var stored_data = localStorage.getItem('leaderboard_data');
+			data = stored_data ? JSON.parse(stored_data) : [];
+			
+			// add data to the UI
+			if (data && data.length > 0) {
+				console.log('Loaded ' + data.length + ' items from localStorage');
+				build_leaderboard();
+			} else {
+				data = [];
+				console.log('No previous data found in localStorage');
+			}
+		} catch(e) {
+			console.error('Error loading data from localStorage:', e);
 			data = [];
 		}
+	} else {
+		data = [];
+		console.warn('localStorage unavailable - starting with empty leaderboard');
 	}
 });
 
@@ -298,7 +315,7 @@ function perform_swap(){
 
 	// update data[] for persistence
 		var iconA = $a.find('.icon').attr('src').replace('images/', '');
-		var nameA = $a.find('.nickname').text();
+	save_data_to_storage(
 		var iconB = $b.find('.icon').attr('src').replace('images/', '');
 	data.forEach(function(person){
 		if (person.icon === iconA && person.nickname === nameA) {
@@ -342,7 +359,7 @@ function initialize_basic_btn_listeners() {
 		var new_person = {
 			icon:    $('#icon-select').val(),
 			nickname: $('#nickname').val(),
-			score:    $('#score').val()
+			score:    parseInt($('#score').val()) || 0
 		};
 		data.push(new_person);
 		build_leaderboard();
@@ -566,7 +583,7 @@ function initialize_person_btn_listeners() {
 			for (i=current_score ; i>=target_score ; i--) {
 				$score.text(i);
 				await sleep(40);
-			}
+		save_data_to_storage(
 		}
 		sort_leaderboard();
 
@@ -604,7 +621,7 @@ function build_leaderboard() {
 	leaderboard_iso.isotope('reloadItems');
 
 	// save data to local storage
-	localStorage.setItem('leaderboard_data', JSON.stringify(data));
+	save_data_to_storage();
 
 	// add button listeners for score +/-
 	initialize_person_btn_listeners();
@@ -617,11 +634,13 @@ function read_data_from_text(data_str) {
 	var lines = data_str.split('\n');
 	lines.forEach(function(line) {
 		tokens = line.split(',');
-		data.push({
-			icon:     tokens[0],
-			nickname: tokens[1],
-			score:    tokens[2]
-		});
+		if (tokens.length >= 3) {
+			data.push({
+				icon:     tokens[0].trim(),
+				nickname: tokens[1].trim(),
+				score:    parseInt(tokens[2].trim()) || 0
+			});
+		}
 	});
 }
 
@@ -675,7 +694,24 @@ function test_local_storage(){
         localStorage.setItem(test, test);
         localStorage.removeItem(test);
         local_storage_available = true;
-    } catch(e) {
+        console.warn('localStorage is not available. Data will not persist across page refreshes.');
+    }
+}
+
+function save_data_to_storage() {
+	if (!local_storage_available) {
+		console.warn('Cannot save data - localStorage is not available');
+		return false;
+	}
+	try {
+		localStorage.setItem('leaderboard_data', JSON.stringify(data));
+		console.log('Data saved to localStorage');
+		return true;
+	} catch(e) {
+		console.error('Error saving data to localStorage:', e);
+		// localStorage might be full or disabled
+		return false;
+	} catch(e) {
         local_storage_available = false;
     }
 }
