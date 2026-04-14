@@ -7,13 +7,13 @@
 	<script type="text/javascript" src="jquery-3.5.1.min.js"></script>
 <style type="text/css">
 html, body, div, figure, p, h1, h2, ul, li, input, button, textarea {margin:0; padding:0; box-sizing: border-box; font-family: sans-serif;}
-body {background-color: #9b8975; }
+body {background-color: #344af1; }
 h1 {padding:30px 0; text-align: center; font-size: 50px; color: #fff8dc;}
 
 
 .leaderboard {list-style: none; width: 100%; height: 100%;}
 .leaderboard .person {background-color: #2d3e50; padding: 0 0 0 70px; width: 100%; height: 70px; margin-bottom: 12px; overflow: hidden; position: relative; user-select: none;}
-.leaderboard .person .icon {position: absolute; top: 0; left: 0; font-size: 50px; line-height: 70px; background: #fff8dc;}
+.leaderboard .person .icon {position: absolute; top: 0; left: 0; width: 70px; height: 70px; background: #fff8dc; object-fit: cover;}
 .leaderboard .person .nickname {padding: 0 0 0 10px; font-size: 30px; line-height: 70px; color: #fff;}
 .leaderboard .person .score {position: absolute; top: 0; right: 0; font-size: 50px; line-height: 70px; background: #dc3546; color: #fff; width: 120px; text-align: center; z-index: 10; cursor: pointer;}
 .leaderboard .person.open .point-btns { right: 120px; }
@@ -42,7 +42,8 @@ h1 {padding:30px 0; text-align: center; font-size: 50px; color: #fff8dc;}
 body.show-add-person .add-person-popup {display: block;}
 body.show-add-person {overflow: hidden;}
 .add-person-popup .box {display: inline-block; height: 500px; width: 500px; background: #353a40; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 6px dashed #fff8dc; text-align:center;}
-.add-person-popup .box .random-icon {width: 200px; height: 200px; font-size: 100px; line-height: 200px; background: #fff; display: inline-block; border-radius: 50%; margin: 25px 0; border: none; padding: 0; text-align: center; color: #000;}
+.add-person-popup .box .random-icon {width: 200px; height: 200px; background: #fff; display: block; border-radius: 50%; margin: 20px auto; border: none; padding: 0; object-fit: cover;}
+.add-person-popup .box select {height: 50px; font-size: 16px; border: none; background: #9b8975; color: #fff; text-align: center; width: 95%; margin-bottom: 10px; cursor: pointer;}
 .add-person-popup .box input {height: 60px; line-height: 50px; font-size: 50px; border: none; background: #9b8975; color: #fff; text-align: center; width: 95%; margin-bottom: 10px;}
 .add-person-popup .box input::-webkit-input-placeholder {color: #7d6c59;}
 .add-person-popup .box #score {width: 250px;}
@@ -105,7 +106,7 @@ body.swap-mode .swap-hint {display: inline-block; animation: hint-bounce 1.4s ea
 </style>
 </head>
 <body>
-	<h1 contenteditable="true" class="lb-header">Leaderboard</h1>
+	<h1 contenteditable="true" class="lb-header">MUKIMU Leaderboard</h1>
 	<div class="lb-box">
 		<ul class="leaderboard">
 			<!-- place for persons / isotope plugin -->
@@ -113,7 +114,9 @@ body.swap-mode .swap-hint {display: inline-block; animation: hint-bounce 1.4s ea
 	</div>	
 	<div class="add-person-popup">
 		<div class="box">
-			<input type="text" id="rand-icon" class="random-icon" value="🦊">
+			<img id="rand-icon" class="random-icon" src="images/boy1.png">
+			<select id="icon-select">
+			</select>
 			<br>
 			<input type="text" id="nickname" size="15" placeholder="Nickname">
 			<br>
@@ -159,10 +162,24 @@ var local_storage_available = false;
 var data            = [];
 var swap_mode_active = false;
 var swap_selected = [];
-var emojis          = "🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐽 🐸 🐵 🙈 🙉 🙊 🐒 🐔 🐧 🐦 🐤 🐣 🐥 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🐛 🦋 🐌 🐞 🐜 🦟 🦗 🕷 🕸 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🦧 🐘 🦛 🦏 🐪 🐫 🦒 🦘 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐩 🦮 🐕‍🦺 🐈 🐓 🦃 🦚 🦜 🦢 🦩 🐇 🦝 🦨 🦡 🦦 🦥 🐁 🐀 🦔".split(" ");
+var images          = [];
+
+// Build image array from available files
+function buildImageArray() {
+	var boys = [];
+	var girls = [];
+	for (var i = 1; i <= 50; i++) {
+		boys.push('boy' + i + '.png');
+		if (i <= 50) girls.push('girl' + i + '.png');
+	}
+	return boys.concat(girls);
+}
+
+images = buildImageArray();
+
 var template        = `
 <li class="person">
-	<p class="icon">{{icon}}</p>
+	<img class="icon" src="images/{{icon}}" alt="{{nickname}}">
 	<p class="nickname">{{nickname}}</p>
 	<p class="score">{{score}}</p>
 	<ul class="point-btns">
@@ -181,6 +198,13 @@ $( document ).ready(function() {
 	// check if local storage is available
 	// updates `local_storage_available` variable
 	test_local_storage();
+
+	// populate image select dropdown
+	var selectElement = $('#icon-select');
+	images.forEach(function(img) {
+		selectElement.append('<option value="' + img + '">' + img.replace('.png', '') + '</option>');
+	});
+	selectElement.val('boy1.png');
 
 	// some button handlers...
 	initialize_basic_btn_listeners();
@@ -273,10 +297,9 @@ function perform_swap(){
  	$b.find('.score').text(scoreA);
 
 	// update data[] for persistence
-	var iconA = $a.find('.icon').text();
-	var nameA = $a.find('.nickname').text();
-	var iconB = $b.find('.icon').text();
-	var nameB = $b.find('.nickname').text();
+		var iconA = $a.find('.icon').attr('src').replace('images/', '');
+		var nameA = $a.find('.nickname').text();
+		var iconB = $b.find('.icon').attr('src').replace('images/', '');
 	data.forEach(function(person){
 		if (person.icon === iconA && person.nickname === nameA) {
 			person.score = scoreB;
@@ -297,10 +320,18 @@ function initialize_basic_btn_listeners() {
 	$('.add-person').on('click',function(){
 		scroll_to_top_smooth();
 		$("body").toggleClass("show-add-person");
-		// pick random animal emoji and clear form
-		$('#rand-icon').val(emojis[getRandomInt(0,emojis.length)]);
+		// pick random image and clear form
+		var randomImage = images[getRandomInt(0, images.length - 1)];
+		$('#icon-select').val(randomImage);
+		$('#rand-icon').attr('src', 'images/' + randomImage);
 		$('#nickname').val("");
 		$('#score').val("");
+	});
+
+	// Update preview image when dropdown changes
+	$('#icon-select').on('change',function(){
+		var selectedImage = $(this).val();
+		$('#rand-icon').attr('src', 'images/' + selectedImage);
 	});
 
 	$('.add-person-popup .cancel').on('click',function(){
@@ -309,7 +340,7 @@ function initialize_basic_btn_listeners() {
 
 	$('.add-person-popup .ok').on('click',function(){
 		var new_person = {
-			icon:    $('#rand-icon').val(),
+			icon:    $('#icon-select').val(),
 			nickname: $('#nickname').val(),
 			score:    $('#score').val()
 		};
@@ -495,7 +526,7 @@ function initialize_person_btn_listeners() {
 		if (!swap_mode_active) return;
 		// avoid clicking the score/points affecting selection
 		var $person = $(this);
-		var key = $person.find('.icon').text() + '|' + $person.find('.nickname').text();
+		var key = $person.find('.icon').attr('src').replace('images/', '') + '|' + $person.find('.nickname').text();
 		var idx = swap_selected.indexOf(key);
 		if (idx >= 0) {
 			// deselect
@@ -541,7 +572,7 @@ function initialize_person_btn_listeners() {
 
 		// update data[]
 		data.forEach(function(person) {
-			if ((person.nickname == $li.find('.nickname').text()) && (person.icon == $li.find('.icon').text())) {
+			if ((person.nickname == $li.find('.nickname').text()) && (person.icon == $li.find('.icon').attr('src').replace('images/', ''))) {
 				person.score = target_score;
 			}
 		})
@@ -558,10 +589,15 @@ function build_leaderboard() {
 
 	// append all person-list-items
 	data.forEach(function(person) {
+		var imagePath = person.icon;
+		// Handle old emoji format for backwards compatibility
+		if (!imagePath.includes('.png')) {
+			imagePath = 'boy1.png'; // fallback
+		}
 		$('.leaderboard').append(
-			template.replace(/{{icon}}/gm,person.icon)
-					.replace(/{{nickname}}/gm,person.nickname)
-					.replace(/{{score}}/gm,person.score));
+			template.replace(/{{icon}}/gm, imagePath)
+					.replace(/{{nickname}}/gm, person.nickname)
+					.replace(/{{score}}/gm, person.score));
 	})
 
 	// reload isotope
