@@ -569,9 +569,8 @@
 <body>
     <h1 contenteditable="true" class="lb-header">MUKIMU Leaderboard</h1>
     <div class="lb-box">
-        <ul class="leaderboard">
-        </ul>
-    </div>  
+        <ul class="leaderboard"></ul>
+    </div>
 
     <div class="add-person-popup">
         <div class="box">
@@ -624,6 +623,31 @@
         var swap_mode_active = false;
         var swap_selected = [];
         var images = [];
+        var sound_enabled = true;
+        var sfx = {
+            plus1: new Audio('sounds/plus1.wav'),
+            plus2: new Audio('sounds/plus2.wav'),
+            plus5: new Audio('sounds/plus5wav.wav'),
+            minus1: new Audio('sounds/minus1.wav')
+        };
+
+        function play_point_sound(points) {
+            if (!sound_enabled) return;
+
+            var key = null;
+            if (points === 1) key = 'plus1';
+            if (points === 2) key = 'plus2';
+            if (points === 5) key = 'plus5';
+            if (points === -1 || points === -2 || points === -5) key = 'minus1';
+
+            if (!key || !sfx[key]) return;
+
+            try {
+                sfx[key].pause();
+                sfx[key].currentTime = 0;
+                sfx[key].play();
+            } catch (e) {}
+        }
 
         function buildImageArray() {
             var boys = [];
@@ -679,13 +703,11 @@
                 try {
                     var decoded_str = decodeURIComponent(window.atob(query_string));
                     data = JSON.parse(decoded_str);
-                    console.log('Loaded shared data from URL');
                     if (local_storage_available) {
                         save_data_to_storage();
                         window.location.href = [location.protocol, '//', location.host, location.pathname].join('');
                     }
                 } catch (e) {
-                    console.error('Error parsing shared data from URL:', e);
                     data = [];
                 }
                 return;
@@ -696,19 +718,15 @@
                     var stored_data = localStorage.getItem('leaderboard_data');
                     data = stored_data ? JSON.parse(stored_data) : [];
                     if (data && data.length > 0) {
-                        console.log('Loaded ' + data.length + ' items from localStorage');
                         build_leaderboard();
                     } else {
                         data = [];
-                        console.log('No previous data found in localStorage');
                     }
                 } catch (e) {
-                    console.error('Error loading data from localStorage:', e);
                     data = [];
                 }
             } else {
                 data = [];
-                console.warn('localStorage unavailable - starting with empty leaderboard');
             }
         });
 
@@ -966,6 +984,7 @@
                 var $score = $li.find('.score');
                 var current_score = parseInt($score.text());
                 var points_clicked = parseInt($(this).attr('data-points-value'));
+                play_point_sound(points_clicked);
                 var target_score = current_score + points_clicked;
 
                 if (target_score > current_score) {
@@ -974,8 +993,8 @@
                         await sleep(40);
                     }
                 } else {
-                    for (var i = current_score; i >= target_score; i--) {
-                        $score.text(i);
+                    for (var j = current_score; j >= target_score; j--) {
+                        $score.text(j);
                         await sleep(40);
                     }
                 }
@@ -999,8 +1018,9 @@
                 var imagePath = normalizeIcon(person.icon);
                 $('.leaderboard').append(
                     template.replace(/{{icon}}/gm, imagePath)
-                        .replace(/{{nickname}}/gm, person.nickname)
-                        .replace(/{{score}}/gm, person.score));
+                            .replace(/{{nickname}}/gm, person.nickname)
+                            .replace(/{{score}}/gm, person.score)
+                );
             });
 
             leaderboard_iso.isotope('reloadItems');
@@ -1056,9 +1076,7 @@
         }
 
         function scroll_to_top_smooth() {
-            window.scrollTo({
-                top: 0
-            });
+            window.scrollTo({ top: 0 });
         }
 
         function test_local_storage() {
@@ -1069,21 +1087,17 @@
                 local_storage_available = true;
             } catch (e) {
                 local_storage_available = false;
-                console.warn('localStorage is not available. Data will not persist across page refreshes.');
             }
         }
 
         function save_data_to_storage() {
             if (!local_storage_available) {
-                console.warn('Cannot save data - localStorage is not available');
                 return false;
             }
             try {
                 localStorage.setItem('leaderboard_data', JSON.stringify(data));
-                console.log('Data saved to localStorage');
                 return true;
             } catch (e) {
-                console.error('Error saving data to localStorage:', e);
                 local_storage_available = false;
                 return false;
             }
@@ -1092,18 +1106,10 @@
         function compare(personA, personB) {
             var scoreA = parseInt(personA.score);
             var scoreB = parseInt(personB.score);
-            if (scoreA < scoreB) {
-                return -1;
-            }
-            if (scoreA > scoreB) {
-                return 1;
-            }
-            if (personA.nickname < personB.nickname) {
-                return -1;
-            }
-            if (personA.nickname > personB.nickname) {
-                return 1;
-            }
+            if (scoreA < scoreB) return -1;
+            if (scoreA > scoreB) return 1;
+            if (personA.nickname < personB.nickname) return -1;
+            if (personA.nickname > personB.nickname) return 1;
             return 0;
         }
     </script>
